@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Бесценная стоматология</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#000;
+    --fg:#fff;
+    --muted:rgba(255,255,255,.72);
+    --soft:rgba(255,255,255,.10);
+    --soft2:rgba(255,255,255,.08);
+    --line:rgba(255,255,255,.10);
+    --shadow: rgba(0,0,0,.70);
+    --accent:#41d39c;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%}
+  body{
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--fg);
+    font-family: Manrope, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    transition: background-color .35s linear; /* FIX: smooth global bg */
+  }
+
+  /* ====== 3D VIEWPORT ====== */
+  #viewport{
+    position:fixed;
+    inset:0;
+    perspective:1400px;
+    overflow:hidden;
+    background:var(--bg);
+    transition: background-color .35s linear; /* FIX */
+  }
+  #world{
+    position:absolute;
+    inset:0;
+    transform-style:preserve-3d;
+  }
+
+  /* ====== GLOBAL VIGNETTE (FIX: remove "rect frames") ====== */
+  #globalVignette{
+    position:fixed;
+    inset:-2px;
+    pointer-events:none;
+    z-index:40; /* below particles(50), above 3D world */
+    background:
+      radial-gradient(1200px 700px at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 58%, rgba(0,0,0,.92) 86%, rgba(0,0,0,1) 100%);
+    transform: translateZ(0);
+  }
+
+  /* ====== PARTICLES ====== */
+  #fx{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:50;
+    mix-blend-mode:screen;
+    opacity:.55;
+  }
+
+  /* ====== SCENES ====== */
+  .scene{
+    position:absolute;
+    inset:0;
+    transform-style:preserve-3d;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    will-change: transform, opacity;
+  }
+
+  /* background light layer per scene */
+  .light{
+    position:absolute;
+    inset:-12vmax;
+    transform: translateZ(-600px);
+    border-radius: 999px;
+    filter: blur(40px);
+    opacity:.9;
+    will-change: transform, opacity;
+  }
+
+  /* vignette (kept for compatibility but not used in scenes anymore) */
+  .vignette{
+    position:absolute;
+    inset:-2px;
+    background:
+      radial-gradient(1200px 700px at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 58%, rgba(0,0,0,.92) 86%, rgba(0,0,0,1) 100%);
+    pointer-events:none;
+    transform: translateZ(-520px);
+  }
+
+  /* background word (far layer) */
+  .bgword{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform: translate(-50%,-50%) translateZ(-420px);
+    transform-style:preserve-3d;
+    pointer-events:none;
+    user-select:none;
+    white-space:nowrap;
+    font-weight:800;
+    letter-spacing:.02em;
+    line-height:1;
+    color:rgba(255,255,255,.035); /* subtle */
+    text-transform:uppercase;
+    will-change: transform, opacity;
+    filter: blur(.0px);
+  }
+
+  /* floating microcopy (mid layer) */
+  .float{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform: translate(-50%,-50%) translateZ(-140px);
+    width:min(980px, calc(100vw - 56px));
+    max-width:980px;
+    text-align:left;
+    pointer-events:none;
+    opacity:.85;
+  }
+  .float .kicker{
+    font-size:12px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.55);
+    margin-bottom:10px;
+  }
+  .float .title{
+    font-size:clamp(26px, 3.1vw, 42px);
+    font-weight:800;
+    line-height:1.08;
+    letter-spacing:-.02em;
+  }
+  .float .desc{
+    margin-top:12px;
+    font-size:clamp(14px, 1.25vw, 16px);
+    line-height:1.55;
+    color:var(--muted);
+    max-width: 760px;
+  }
+  .float .bullets{
+    margin-top:12px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 14px;
+    color:rgba(255,255,255,.58);
+    font-size:13px;
+  }
+  .pill{
+    padding:8px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(10px);
+  }
+
+  /* card (near layer) */
+  .card{
+    position:relative;
+    transform: translateZ(160px);
+    width:min(980px, calc(100vw - 56px));
+    max-width:980px;
+    border-radius:24px;
+    background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow: 0 28px 80px rgba(0,0,0,.72);
+    backdrop-filter: blur(14px);
+    padding: clamp(20px, 2.4vw, 34px);
+    will-change: transform, opacity;
+  }
+
+  .card .topline{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+  }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    font-size:12px;
+    letter-spacing:.20em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.62);
+  }
+  .dot{
+    width:8px;height:8px;border-radius:99px;
+    background:rgba(65,211,156,.9);
+    box-shadow:0 0 18px rgba(65,211,156,.55);
+  }
+
+  .card h2{
+    font-size:clamp(26px, 3.2vw, 44px);
+    line-height:1.08;
+    letter-spacing:-.02em;
+    font-weight:800;
+  }
+  .card p{
+    margin-top:10px;
+    font-size:clamp(14px, 1.25vw, 16px);
+    line-height:1.6;
+    color:rgba(255,255,255,.78);
+    max-width: 860px;
+  }
+  .card .sub{
+    margin-top:12px;
+    color:rgba(255,255,255,.62);
+    font-size:13px;
+  }
+
+  .row{
+    display:flex;
+    gap:18px;
+    margin-top:18px;
+    flex-wrap:wrap;
+  }
+
+  /* CTA layout */
+  .ctaWrap{
+    display:grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap:18px;
+    margin-top:18px;
+    align-items:stretch;
+  }
+  @media (max-width: 920px){
+    .ctaWrap{grid-template-columns:1fr}
+  }
+
+  .field{
+    width:100%;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(0,0,0,.22);
+    padding:12px 14px;
+    color:#fff;
+    outline:none;
+    font-family:inherit;
+    font-size:14px;
+  }
+  .field::placeholder{color:rgba(255,255,255,.45)}
+  .btnRow{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+  .btn{
+    border:none;
+    cursor:pointer;
+    border-radius:999px;
+    padding:11px 14px;
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:.01em;
+    transition: transform .12s ease, filter .12s ease, background .12s ease;
+    user-select:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+  }
+  .btn:active{transform:scale(.98)}
+  .btnPrimary{
+    background:rgba(65,211,156,.92);
+    color:#08140f;
+    box-shadow:0 16px 40px rgba(65,211,156,.18), 0 0 0 1px rgba(65,211,156,.18);
+  }
+  .btnGhost{
+    background:rgba(255,255,255,.08);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.12);
+  }
+  .btnLink{
+    background:transparent;
+    color:rgba(65,211,156,.92);
+    padding:0;
+    border-radius:0;
+  }
+
+  .map{
+    width:100%;
+    min-height:240px;
+    border-radius:18px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.25);
+  }
+  .map iframe{width:100%;height:100%;border:0;display:block;filter: saturate(1.05) contrast(1.05) brightness(.95);}
+
+  /* UI */
+  #hint{
+    position:fixed;
+    left:50%;
+    bottom:14px;
+    transform:translateX(-50%);
+    z-index:60;
+    font-size:11px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.22);
+    user-select:none;
+    pointer-events:none;
+    mix-blend-mode:screen;
+  }
+  #progress{
+    position:fixed;
+    left:0; top:0;
+    height:2px;
+    width:0%;
+    background:rgba(65,211,156,.9);
+    box-shadow:0 0 18px rgba(65,211,156,.35);
+    z-index:70;
+    opacity:.55;
+  }
+
+  /* accessibility */
+  @media (prefers-reduced-motion: reduce){
+    #fx{display:none}
+  }
+</style>
+</head>
+
+<body>
+
+<div id="progress"></div>
+<canvas id="fx"></canvas>
+<div id="globalVignette"></div>
+
+<div id="viewport" aria-label="Бесценная стоматология — сайт">
+  <div id="world">
+
+    <!-- Scene 1 -->
+    <section class="scene" data-word="ТИШИНА" data-kicker="Что это" data-dir="lr" data-light="mono">
+      <div class="light"></div>
+      <div class="bgword">ТИШИНА</div>
+
+      <div class="card">
+        <div class="topline">
+          <div class="badge"><span class="dot"></span>Бесценная стоматология</div>
+          <div class="badge" style="opacity:.72">формат</div>
+        </div>
+        <h2>Сначала лечат,<br>а потом вы принимаете решение</h2>
+        <p>Здесь нет прайса, акций и «от / до». После приёма вы сами решаете, сколько заплатить за работу врача.</p>
+        <div class="row">
+          <span class="pill">Без давления</span>
+          <span class="pill">Без «допродаж»</span>
+          <span class="pill">Без комментариев к сумме</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 2 -->
+    <section class="scene" data-word="ТРЕВОГА" data-kicker="С чем приходят" data-dir="center" data-light="red">
+      <div class="light"></div>
+      <div class="bgword">ТРЕВОГА</div>
+
+      <div class="card">
+        <div class="topline">
+          <div class="badge"><span class="dot"></span>Состояние</div>
+          <div class="badge" style="opacity:.72">первый шаг</div>
+        </div>
+        <h2>Боль. Беспокойство.<br>Неясность, что будет дальше</h2>
+        <p>Когда что-то не так, хочется, чтобы помогли — спокойно и профессионально. Мы начинаем не с продажи услуг, а с понимания ситуации.</p>
+        <div class="sub">Формат подходит тем, кто привык принимать решения самостоятельно.</div>
+      </div>
+    </section>
+
+    <!-- Scene 3 -->
+    <section class="scene" data-word="ЯСНОСТЬ" data-kicker="Диагностика" data-dir="in" data-light="cold">
+      <div class="light"></div>
+      <div class="bgword">ЯСНОСТЬ</div>
+
+      <div class="card">
+        <div class="topline">
+          <div class="badge"><span class="dot"></span>Как начинаем</div>
+          <div class="badge" style="opacity:.72">ясность</div>
+        </div>
+        <h2>Мы начинаем с диагностики и разговора</h2>
+        <p>Осмотр врача и КТ — чтобы понять, что происходит, и спокойно объяснить варианты.</p>
+        <div class="row">
+          <span class="pill">Без спешки</span>
+          <span class="pill">Без «пакетов»</span>
+          <span class="pill">По делу</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 4 -->
+    <section class="scene" data-word="КОНТРОЛЬ" data-kicker="Процесс" data-dir="rl" data-light="green">
+      <div class="light"></div>
+      <div class="bgword">КОНТРОЛЬ</div>
+
+      <div class="card">
+        <div class="topline">
+          <div class="badge"><span class="dot"></span>Дальше</div>
+          <div class="badge" style="opacity:.72">спокойно</div>
+        </div>
+        <h2>Обычный приём.<br>Профессиональная работа врача</h2>
+        <p>Приём проходит как в обычной стоматологии: диагностика, лечение — если требуется. Всё в спокойном темпе. Никакой драмы и рекламы.</p>
+        <div class="sub">Первичный визит — это приём и работа врача. Вы принимаете решение об оплате после.</div>
+      </div>
+    </section>
+
+    <!-- Scene 5 -->
+    <section class="scene" data-word="ВЫБОР" data-kicker="Оплата" data-dir="stabilize" data-light="warm">
+      <div class="light"></div>
+      <div class="bgword">ВЫБОР</div>
+
+      <div class="card">
+        <div class="topline">
+          <div class="badge"><span class="dot"></span>Главное правило</div>
+          <div class="badge" style="opacity:.72">свобода</div>
+        </div>
+        <h2>Вы платите столько,<br>сколько считаете правильным</h2>
+        <p>После приёма вам не называют цену. Мы не торгуемся, не объясняем «почему столько», не подталкиваем. Решение об оплате остаётся за вами.</p>
+        <div class="row">
+          <span class="pill">Без давления</span>
+          <span class="pill">Без оценок</span>
+          <span class="pill">Без обсуждений</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 6 (CTA) -->
+    <section class="scene" data-word="КОНТАКТ" data-kicker="Запись" data-dir="stabilize" data-light="cta">
+      <div class="light"></div>
+      <div class="bgword">КОНТАКТ</div>
+
+      <div class="card" id="ctaCard">
+        <div class="topline">
+          <div class="badge"><span class="dot"></span>Запись на приём</div>
+          <div class="badge" style="opacity:.72">центр Москвы</div>
+        </div>
+
+        <h2>Оставьте контакт —<br>мы перезвоним</h2>
+        <p>Центр Москвы, 2–3 минуты от метро Новокузнецкая.</p>
+
+        <div class="ctaWrap">
+          <div>
+            <input class="field" id="name" placeholder="Ваше имя" autocomplete="name">
+            <div style="height:10px"></div>
+            <input class="field" id="phone" placeholder="Телефон" autocomplete="tel">
+            <div class="btnRow">
+              <button class="btn btnPrimary" id="sendBtn">Перезвоните мне</button>
+              <a class="btn btnGhost" id="callBtn" href="tel:+70000000000">Позвонить сейчас</a>
+              <a class="btn btnLink" id="routeBtn" href="#" target="_blank" rel="noopener">Построить маршрут</a>
+            </div>
+            <div class="sub" style="margin-top:10px;opacity:.85">
+              Нажимая «Перезвоните мне», вы отправляете заявку. Мы свяжемся и предложим удобное время.
+            </div>
+            <div class="sub" id="formStatus" style="margin-top:8px;color:rgba(65,211,156,.92);display:none"></div>
+            <div class="sub" id="formError" style="margin-top:8px;color:rgba(255,120,120,.92);display:none"></div>
+          </div>
+
+          <div class="map" aria-label="Карта">
+            <!-- Плейсхолдер (Новокузнецкая). Можно заменить на ваш конструктор Яндекс.Карт -->
+            <iframe
+              id="ymap"
+              src="https://yandex.ru/map-widget/v1/?ll=37.629000%2C55.741000&z=14&pt=37.629000%2C55.741000%2Cpm2rdm"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              allowfullscreen
+              title="Карта — Бесценная стоматология"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="hint">SCROLL</div>
+
+<script>
+(() => {
+  // ========= SETTINGS =========
+  const Z_GAP = 1500;                 // distance between scenes in depth
+  const WHEEL_POWER = 1.15;           // scroll sensitivity
+  const SMOOTH = 0.085;               // easing
+  const HOLD_TAIL = 520;              // extra distance for "stick on CTA"
+  const WORD_OPACITY_NEAR = 0.050;    // subtle word visibility at focus
+  const WORD_OPACITY_FAR  = 0.010;    // far
+  const WORD_FAR_Z = -420;            // far layer depth
+  const LIGHT_FAR_Z = -600;           // light layer depth
+  const FLOAT_MID_Z = -140;           // mid layer depth
+
+  // ========= TELEGRAM (PUT YOUR VALUES) =========
+  // ВАЖНО: не храните токен в публичном сайте. Это временное решение.
+  // Заполните и задеплойте — потом перенесём на сервер/веркель-функцию.
+  const TG_BOT_TOKEN = "8551995792:AAETmt4tg964YCs_oKMrHeMnwc4CpRUZjJA";
+  const TG_CHAT_ID   = "745731396";
+
+  // ========= DOM =========
+  const scenes = [...document.querySelectorAll('.scene')];
+  const world = document.getElementById('world');
+  const hint = document.getElementById('hint');
+  const progress = document.getElementById('progress');
+  const viewportEl = document.getElementById('viewport');
+
+  // set baseZ
+  scenes.forEach((s, i) => {
+    s.baseZ = -i * Z_GAP;
+    s.dataset.index = String(i);
+  });
+
+  const minTarget = 0;
+  const maxTarget = (scenes.length - 1) * Z_GAP + HOLD_TAIL;
+
+  // ========= PARTICLES =========
+  const fx = document.getElementById('fx');
+  const ctx = fx.getContext('2d', { alpha:true });
+
+  let DPR = Math.min(2, window.devicePixelRatio || 1);
+  function resizeFX(){
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    fx.width = Math.floor(innerWidth * DPR);
+    fx.height = Math.floor(innerHeight * DPR);
+    fx.style.width = innerWidth + "px";
+    fx.style.height = innerHeight + "px";
+  }
+  resizeFX();
+  addEventListener('resize', resizeFX, {passive:true});
+
+  const P = [];
+  const PCOUNT = Math.min(140, Math.floor((innerWidth*innerHeight) / 12000));
+  function seedParticles(){
+    P.length = 0;
+    const n = Math.max(80, PCOUNT);
+    for(let i=0;i<n;i++){
+      P.push({
+        x: Math.random(),
+        y: Math.random(),
+        z: Math.random(),
+        r: 0.6 + Math.random()*1.8,
+        v: 0.12 + Math.random()*0.55,
+        a: 0.15 + Math.random()*0.45,
+        ph: Math.random()*Math.PI*2
+      });
+    }
+  }
+  seedParticles();
+  addEventListener('resize', seedParticles, {passive:true});
+
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  // ========= INPUT / SCROLL =========
+  let pos = 0;
+  let target = 0;
+  let lastTs = performance.now();
+
+  function push(delta){
+    // delta > 0 goes forward
+    target = clamp(target + delta, minTarget, maxTarget);
+  }
+
+  // Wheel
+  addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const dy = e.deltaY;
+    // normalize: trackpad often gives small deltas
+    const scaled = dy * WHEEL_POWER;
+    push(scaled);
+  }, { passive:false });
+
+  // Touch
+  let touchY = null;
+  addEventListener('touchstart', (e) => {
+    if(!e.touches || !e.touches[0]) return;
+    touchY = e.touches[0].clientY;
+  }, {passive:true});
+  addEventListener('touchmove', (e) => {
+    if(touchY === null || !e.touches || !e.touches[0]) return;
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    const dy = (touchY - y) * 2.2;
+    touchY = y;
+    push(dy);
+  }, {passive:false});
+  addEventListener('touchend', () => { touchY = null; }, {passive:true});
+
+  // Keyboard
+  addEventListener('keydown', (e) => {
+    if(['ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); push(220); }
+    if(['ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); push(-220); }
+    if(e.key === 'Home'){ e.preventDefault(); target = 0; }
+    if(e.key === 'End'){ e.preventDefault(); target = maxTarget; }
+  }, {passive:false});
+
+  // ========= WORD FIT (FIX: bigger bg words) =========
+  function fitWords(){
+    const vw = innerWidth;
+    scenes.forEach(s => {
+      const w = s.querySelector('.bgword');
+      if(!w) return;
+
+      // FIX: bigger baseline
+      w.style.fontSize = 'clamp(96px, 26vw, 420px)';
+
+      // measure and scale to fit safe width
+      w.style.transform = 'translate(-50%,-50%) translateZ(' + WORD_FAR_Z + 'px)';
+      const rect = w.getBoundingClientRect();
+      const safe = Math.max(320, vw * 0.95);
+      const scale = clamp(safe / Math.max(1, rect.width), 0.75, 1.0);
+
+      w._fitScale = scale;
+    });
+  }
+  fitWords();
+  addEventListener('resize', fitWords, {passive:true});
+
+  // ========= SCENE THEMES (FIX: background color per cycle) =========
+  function themeForScene(i){
+    // Return RGB-ish for particles + light placement + GLOBAL BG
+    switch(i){
+      case 0: return { c:[200,210,220], a:0.55, l:[255,255,255], la:0.10, bg:[0,0,0] };
+      case 1: return { c:[255,120,120], a:0.55, l:[255,80,90],  la:0.18, bg:[18,6,8] };
+      case 2: return { c:[140,185,255], a:0.50, l:[120,170,255],la:0.16, bg:[6,10,22] };
+      case 3: return { c:[120,255,210], a:0.55, l:[80,255,210], la:0.18, bg:[6,18,14] };
+      case 4: return { c:[255,220,150], a:0.52, l:[255,200,120],la:0.18, bg:[18,14,6] };
+      case 5: return { c:[120,255,210], a:0.58, l:[65,211,156], la:0.18, bg:[4,12,10] };
+      default: return { c:[200,210,220], a:0.50, l:[255,255,255],la:0.10, bg:[0,0,0] };
+    }
+  }
+
+  function setLight(el, i){
+    const t = themeForScene(i);
+    const [r,g,b] = t.l;
+    el.style.background =
+      `radial-gradient(closest-side at 50% 45%, rgba(${r},${g},${b},${t.la}) 0%, rgba(${r},${g},${b},0.0) 70%)`;
+  }
+
+  // ========= TELEGRAM FORM =========
+  const nameEl = document.getElementById('name');
+  const phoneEl = document.getElementById('phone');
+  const sendBtn = document.getElementById('sendBtn');
+  const statusEl = document.getElementById('formStatus');
+  const errorEl  = document.getElementById('formError');
+
+  const callBtn = document.getElementById('callBtn');
+  // поставь свой реальный номер:
+  const PHONE_PUBLIC = "+79262887488";
+  callBtn.href = "tel:" + PHONE_PUBLIC;
+
+  const routeBtn = document.getElementById('routeBtn');
+  // координаты около Новокузнецкой (плейсхолдер)
+  const DEST_LL = "37.629000,55.741000";
+  routeBtn.href = `https://yandex.ru/maps/?rtext=~${DEST_LL}&rtt=auto`;
+
+  function showStatus(msg){
+    errorEl.style.display = "none";
+    statusEl.style.display = "block";
+    statusEl.textContent = msg;
+  }
+  function showError(msg){
+    statusEl.style.display = "none";
+    errorEl.style.display = "block";
+    errorEl.textContent = msg;
+  }
+
+  function sanitizePhone(v){
+    return (v || '').replace(/[^\d+()\-\s]/g,'').trim();
+  }
+
+  async function sendToTelegram(payload){
+    const url = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        chat_id: TG_CHAT_ID,
+        text: payload,
+        parse_mode: "HTML",
+        disable_web_page_preview: true
+      })
+    });
+    const data = await res.json().catch(()=>null);
+    if(!res.ok || !data || data.ok !== true){
+      throw new Error((data && data.description) ? data.description : "Ошибка отправки");
+    }
+    return true;
+  }
+
+  if(sendBtn){
+    sendBtn.addEventListener('click', async () => {
+      const name = (nameEl.value || '').trim();
+      const phone = sanitizePhone(phoneEl.value);
+      if(!name || !phone){
+        showError("Заполните имя и телефон.");
+        return;
+      }
+      if(!TG_BOT_TOKEN || !TG_CHAT_ID){
+        showError("Не настроено: TG_BOT_TOKEN / TG_CHAT_ID.");
+        return;
+      }
+
+      sendBtn.disabled = true;
+      sendBtn.style.filter = "saturate(.7) brightness(.95)";
+      try{
+        const now = new Date();
+        const ts = now.toLocaleString('ru-RU');
+        const msg =
+`<b>Заявка с сайта — Бесценная стоматология</b>
+<b>Имя:</b> ${escapeHTML(name)}
+<b>Телефон:</b> ${escapeHTML(phone)}
+<b>Время:</b> ${escapeHTML(ts)}`;
+        await sendToTelegram(msg);
+        showStatus("Отправлено. Мы перезвоним.");
+        nameEl.value = "";
+        phoneEl.value = "";
+      }catch(err){
+        showError("Не отправилось: " + (err && err.message ? err.message : "ошибка"));
+      }finally{
+        sendBtn.disabled = false;
+        sendBtn.style.filter = "";
+      }
+    });
+  }
+
+  function escapeHTML(s){
+    return String(s).replace(/[&<>"']/g, (m) => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+    }[m]));
+  }
+
+  // ========= ANIMATION LOOP =========
+  function animate(ts){
+    const dt = Math.min(48, ts - lastTs);
+    lastTs = ts;
+
+    // smooth
+    pos = lerp(pos, target, SMOOTH);
+
+    // progress bar
+    const pr = clamp(pos / maxTarget, 0, 1);
+    progress.style.width = (pr * 100).toFixed(2) + "%";
+
+    // current scene index & blend for particles + background
+    const rawIndex = pos / Z_GAP;
+    const i0 = Math.floor(rawIndex);
+    const f  = rawIndex - i0;
+
+    const t0 = themeForScene(clamp(i0, 0, scenes.length-1));
+    const t1 = themeForScene(clamp(i0+1, 0, scenes.length-1));
+
+    // FIX: GLOBAL BACKGROUND COLOR (interpolated)
+    const bg = [
+      Math.round(lerp(t0.bg[0], t1.bg[0], f)),
+      Math.round(lerp(t0.bg[1], t1.bg[1], f)),
+      Math.round(lerp(t0.bg[2], t1.bg[2], f))
+    ];
+    const bgColor = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
+    document.body.style.backgroundColor = bgColor;
+    viewportEl.style.backgroundColor = bgColor;
+
+    const pc = [
+      Math.round(lerp(t0.c[0], t1.c[0], f)),
+      Math.round(lerp(t0.c[1], t1.c[1], f)),
+      Math.round(lerp(t0.c[2], t1.c[2], f))
+    ];
+    const pa = lerp(t0.a, t1.a, f);
+
+    // particles draw
+    ctx.clearRect(0,0,fx.width,fx.height);
+    ctx.save();
+    ctx.scale(DPR, DPR);
+
+    const w = innerWidth;
+    const h = innerHeight;
+
+    // subtle drift speed depends on scroll velocity
+    const vel = Math.abs(target - pos);
+    const drift = clamp(vel / 1200, 0, 1);
+
+    ctx.globalCompositeOperation = 'lighter';
+    for(const p of P){
+      p.ph += (0.004 + p.v*0.002) * (0.6 + drift*1.2);
+      p.y -= (0.0008 + p.v*0.0012) * (0.7 + drift*1.1);
+      p.x += Math.sin(p.ph) * 0.0006;
+
+      if(p.y < -0.08){ p.y = 1.08; p.x = Math.random(); p.z = Math.random(); }
+      if(p.x < -0.08) p.x = 1.08;
+      if(p.x > 1.08) p.x = -0.08;
+
+      const px = p.x * w;
+      const py = p.y * h;
+
+      const s = (0.35 + p.z*1.25);
+      const rr = p.r * s;
+      const alpha = (0.08 + p.a*0.12) * pa;
+
+      ctx.fillStyle = `rgba(${pc[0]},${pc[1]},${pc[2]},${alpha})`;
+      ctx.beginPath();
+      ctx.arc(px, py, rr, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // scenes update
+    scenes.forEach((s, idx) => {
+      const z = s.baseZ + pos;
+
+      // scene transform
+      s.style.transform = `translateZ(${z}px)`;
+
+      // opacity based on distance (crossfade)
+      const dist = Math.abs(z);
+      let op = 1 - dist / 1000;
+      op = clamp(op, 0, 1);
+      // keep CTA visible while "stuck"
+      if(idx === scenes.length-1 && pos > (scenes.length-1)*Z_GAP){
+        op = 1;
+      }
+      s.style.opacity = op.toFixed(4);
+
+      // light layer per scene
+      const light = s.querySelector('.light');
+      if(light){
+        setLight(light, idx);
+        // slight parallax movement of light
+        const lx = Math.sin((pos*0.0008) + idx) * 6;
+        const ly = Math.cos((pos*0.0009) + idx*1.3) * 6;
+        light.style.transform = `translate3d(${lx}px, ${ly}px, ${LIGHT_FAR_Z}px)`;
+      }
+
+      // word parallax + direction
+      const word = s.querySelector('.bgword');
+      if(word){
+        const dir = (s.dataset.dir || 'center');
+        const fitScale = word._fitScale || 1;
+
+        // word movement: independent from card; far layer
+        let x = 0;
+        let y = 0;
+
+        if(dir === 'lr'){
+          x = lerp(-42, 42, clamp((pos - idx*Z_GAP + 600) / 1200, 0, 1));
+        }else if(dir === 'rl'){
+          x = lerp(42, -42, clamp((pos - idx*Z_GAP + 600) / 1200, 0, 1));
+        }else if(dir === 'center'){
+          x = Math.sin((pos*0.0012)+idx) * 10;
+        }else if(dir === 'in'){
+          // mostly depth feeling: tiny sideways
+          x = Math.sin((pos*0.0014)+idx*2.2) * 6;
+        }else if(dir === 'stabilize'){
+          x = Math.sin((pos*0.0010)+idx) * 4;
+          y = Math.cos((pos*0.0011)+idx) * 2;
+        }
+
+        // also slight vertical drift to avoid "poster" feel
+        y += Math.sin((pos*0.0009)+idx*1.7) * 6;
+
+        // fade word with distance: subtle at focus, almost invisible far
+        const wordOp = lerp(WORD_OPACITY_NEAR, WORD_OPACITY_FAR, clamp(dist/1200, 0, 1));
+        word.style.color = `rgba(255,255,255,${wordOp})`;
+
+        word.style.transform =
+          `translate(-50%,-50%) translate3d(${x}vw, ${y}px, ${WORD_FAR_Z}px) scale(${fitScale})`;
+      }
+
+      // float text (mid) - keep cinematic, but don't overpower
+      const float = s.querySelector('.float');
+      if(float){
+        const wob = Math.sin((pos*0.0012)+idx) * 8;
+        float.style.transform = `translate(-50%,-50%) translate3d(${wob}px, 0px, ${FLOAT_MID_Z}px)`;
+        float.style.opacity = (op * 0.85).toFixed(4);
+      }
+
+      // card subtle breathing
+      const card = s.querySelector('.card');
+      if(card){
+        const breathe = 1 + Math.sin((pos*0.0011)+idx*0.8) * 0.006;
+        card.style.transform = `translateZ(160px) scale(${breathe})`;
+      }
+    });
+
+    // hint fade near end
+    const endFade = clamp(1 - (pos - (maxTarget - 900))/900, 0, 1);
+    hint.style.opacity = (0.22 * endFade).toFixed(3);
+
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+
+})();
+</script>
+
+</body>
+</html>
