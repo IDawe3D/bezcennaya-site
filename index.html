@@ -54,7 +54,6 @@
     z-index:40;
     background:
       radial-gradient(1200px 700px at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 58%, rgba(0,0,0,.92) 86%, rgba(0,0,0,1) 100%);
-    transform: translateZ(0);
   }
 
   /* ====== PARTICLES ====== */
@@ -297,6 +296,7 @@
     align-items:center;
     justify-content:center;
     gap:10px;
+    text-decoration:none;
   }
   .btn:active{transform:scale(.98)}
   .btnPrimary{
@@ -555,9 +555,9 @@
   const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ========= SETTINGS =========
-  const Z_GAP = IS_MOBILE ? 1100 : 1500;     // Mobile: less depth (lighter GPU), same mechanics
+  const Z_GAP = IS_MOBILE ? 1100 : 1500;
   const WHEEL_POWER = IS_MOBILE ? 1.35 : 1.15;
-  const SMOOTH = IS_MOBILE ? 0.12 : 0.085;   // Mobile: less "tягучесть"
+  const SMOOTH = IS_MOBILE ? 0.12 : 0.085;
   const HOLD_TAIL = 520;
 
   const WORD_OPACITY_NEAR = 0.050;
@@ -572,7 +572,6 @@
 
   // ========= DOM =========
   const scenes = [...document.querySelectorAll('.scene')];
-  const world = document.getElementById('world');
   const hint = document.getElementById('hint');
   const progress = document.getElementById('progress');
   const viewportEl = document.getElementById('viewport');
@@ -829,7 +828,6 @@
 
   let bt = 0;
 
-  // Mobile perf: run brand canvas at lower FPS and without spawning sparks
   const BRAND_FPS = IS_MOBILE ? 24 : 60;
   let brandAcc = 0;
   let brandLast = performance.now();
@@ -863,7 +861,6 @@
       brandWrap.style.filter = `blur(${(1-fade)*blurMax}px)`;
     }
 
-    // Only desktop spawns sparks (mobile keeps only glow)
     if(!IS_MOBILE && brand && fade > 0.05){
       const r = brand.getBoundingClientRect();
       if(Math.random() < .28 * fade){
@@ -903,7 +900,6 @@
   requestAnimationFrame(brandLoop);
 
   // ========= ANIMATION LOOP =========
-  // Mobile perf: draw particles every other frame
   let fxToggle = 0;
 
   function animate(ts){
@@ -979,6 +975,7 @@
     scenes.forEach((s, idx) => {
       const z = s.baseZ + pos;
 
+      // 3D stays 3D
       s.style.transform = `translateZ(${z}px)`;
 
       const dist = Math.abs(z);
@@ -989,6 +986,19 @@
         op = 1;
       }
       s.style.opacity = op.toFixed(4);
+
+      // HARD anti-stacking guard (especially mobile)
+      if(IS_MOBILE){
+        s.style.visibility = (op > 0.02) ? 'visible' : 'hidden';
+      }else{
+        s.style.visibility = 'visible';
+      }
+
+      // Mobile taps: only CTA when it's реально на экране
+      if(IS_MOBILE){
+        const isCTA = (idx === scenes.length - 1);
+        s.style.pointerEvents = (isCTA && op > 0.55) ? 'auto' : 'none';
+      }
 
       const light = s.querySelector('.light');
       if(light){
@@ -1056,5 +1066,3 @@
 
 </body>
 </html>
-
-
