@@ -393,10 +393,57 @@
     .badge{font-size:11px}
     .pill{font-size:12px}
   }
+/* ===== SWIPE HINT ===== */
+#swipeHint{
+  position:fixed;
+  left:50%;
+  bottom:70px;
+  transform:translateX(-50%);
+  z-index:9999;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  color:#fff;
+  font-size:14px;
+  opacity:.9;
+  pointer-events:none;
+  animation:hintFade 6s infinite;
+}
+@media (max-width: 768px){
+  #swipeHint{ display:flex; }
+}
+
+#swipeHint .hand{
+  font-size:28px;
+  animation:handMove 1.5s infinite ease-in-out;
+}
+
+#swipeHint .text{
+  font-size:12px;
+  letter-spacing:.04em;
+  opacity:.8;
+}
+
+@keyframes handMove{
+  0%{transform:translateY(0)}
+  50%{transform:translateY(-18px)}
+  100%{transform:translateY(0)}
+}
+
+@keyframes hintFade{
+  0%,80%{opacity:.9}
+  100%{opacity:0}
+}
 </style>
 </head>
 
 <body>
+<!-- SWIPE HINT -->
+<div id="swipeHint">
+  <div class="hand">👆</div>
+  <div class="text">Свайпните вверх</div>
+</div>
 
 <div id="progress"></div>
 
@@ -1058,17 +1105,38 @@
         card.style.transform = `translateZ(160px) scale(${breathe})`;
       }
     });
-
+if(!hintHidden){
+  if(pos > 120){
+    hideSwipeHint();
+  } else {
     const endFade = clamp(1 - (pos - (maxTarget - 900))/900, 0, 1);
     hint.style.opacity = (0.22 * endFade).toFixed(3);
-
+  }
+}
     requestAnimationFrame(animate);
   }
   requestAnimationFrame(animate);
 
 })();
+/* hide swipe hint after interaction */
+let hintHidden = false;
+
+function hideSwipeHint(){
+  if(hintHidden) return;
+  hintHidden = true;
+  const h = document.getElementById('swipeHint');
+  if(h){
+    h.style.transition = 'opacity .6s';
+    h.style.opacity = '0';
+    setTimeout(()=>h.remove(),700);
+  }
+}
+
+if (IS_MOBILE){
+  window.addEventListener('touchmove', hideSwipeHint, {passive:true});
+  window.addEventListener('touchstart', hideSwipeHint, {passive:true});
+}
 </script>
 
 </body>
 </html>
-
