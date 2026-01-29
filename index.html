@@ -685,6 +685,7 @@
   let pos = 0;
   let target = 0;
   let lastTs = performance.now();
+let firstTouchBoost = true;
 
   function push(delta){
     target = clamp(target + delta, minTarget, maxTarget);
@@ -709,6 +710,10 @@
     const mult = IS_MOBILE ? 2.8 : 2.2;
     const dy = (touchY - y) * mult;
     touchY = y;
+if(firstTouchBoost){
+  target += 180;
+  firstTouchBoost = false;
+}
     push(dy);
   }, {passive:false});
 
