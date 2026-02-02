@@ -578,39 +578,34 @@
         <p>Центр Москвы, 2–3 минуты от метро Новокузнецкая.</p>
 
         <div class="ctaWrap">
-          <div>
-            <input class="field" id="name" placeholder="Ваше имя" autocomplete="name">
-            <div style="height:10px"></div>
-            <input class="field" id="phone" placeholder="Телефон" autocomplete="tel">
-            <div class="btnRow">
-              <button class="btn btnPrimary" id="sendBtn">Перезвоните мне</button>
-              <a class="btn btnGhost" id="callBtn" href="tel:+70000000000">Позвонить сейчас</a>
-              <a class="btn btnLink" id="routeBtn" href="#" target="_blank" rel="noopener">Построить маршрут</a>
-            </div>
-            <div class="sub" style="margin-top:10px;opacity:.85">
-              Нажимая «Перезвоните мне», вы отправляете заявку. Мы свяжемся и предложим удобное время.
-            </div>
-            <div class="sub" id="formStatus" style="margin-top:8px;color:rgba(65,211,156,.92);display:none"></div>
-            <div class="sub" id="formError" style="margin-top:8px;color:rgba(255,120,120,.92);display:none"></div>
-          </div>
+  <div>
+    <input class="field" id="name" placeholder="Ваше имя" autocomplete="name">
+    <div style="height:10px"></div>
+    <input class="field" id="phone" placeholder="Телефон" autocomplete="tel">
 
-          <div class="map" aria-label="Карта">
-            <iframe
-              id="ymap"
-              src="https://yandex.ru/map-widget/v1/?ll=37.629000%2C55.741000&z=14&pt=37.629000%2C55.741000%2Cpm2rdm"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-              allowfullscreen
-              title="Карта — Бесценная стоматология"
-            ></iframe>
-          </div>
-        </div>
-      </div>
-    </section>
+    <div class="btnRow">
+      <button class="btn btnPrimary" id="sendBtn">Перезвоните мне</button>
+      <a class="btn btnGhost" id="callBtn" href="tel:+70000000000">Позвонить сейчас</a>
+      <a class="btn btnLink" id="routeBtn" href="#" target="_blank" rel="noopener">Построить маршрут</a>
+    </div>
 
+    <div class="sub" style="margin-top:10px;opacity:.85">
+      Нажимая «Перезвоните мне», вы отправляете заявку. Мы свяжемся и предложим удобное время.
+    </div>
+
+    <div class="sub" id="formStatus" style="margin-top:8px;color:rgba(65,211,156,.92);display:none"></div>
+    <div class="sub" id="formError" style="margin-top:8px;color:rgba(255,120,120,.92);display:none"></div>
+  </div>
+
+  <div class="map" aria-label="Карта">
+    <div id="ymap" style="width:100%;height:100%;"></div>
   </div>
 </div>
 
+</div> <!-- card -->
+</section>
+</div> <!-- world -->
+</div> <!-- viewport -->
 <div id="hint">SCROLL</div>
 
 <script>
@@ -1137,8 +1132,7 @@ if(!hintHidden){
 
 })();
 /* hide swipe hint after interaction */
-let hintHidden = false;
-
+var hintHidden = false;
 function hideSwipeHint(){
   if(hintHidden) return;
   hintHidden = true;
@@ -1150,12 +1144,33 @@ function hideSwipeHint(){
   }
 }
 
-if (IS_MOBILE){
+if (window.innerWidth <= 768){
   window.addEventListener('touchmove', hideSwipeHint, {passive:true});
   window.addEventListener('touchstart', hideSwipeHint, {passive:true});
 }
+
 </script>
+<script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU"></script>
+<script>
+ymaps.ready(function () {
+  var map = new ymaps.Map("ymap", {
+    center: [55.741000, 37.629000],
+    zoom: 16,
+    controls: []
+  });
+
+  var placemark = new ymaps.Placemark(
+    [55.741000, 37.629000],
+    { hintContent: "Бесценная стоматология" },
+    { preset: "islands#redIcon" }
+  );
+
+  map.geoObjects.add(placemark);
+});
+</script>
+
 
 </body>
 </html>
+
 
